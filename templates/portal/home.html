@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="home-container">
+
+  <!-- Welcome Section -->
+  <div class="welcome-box">
+    <div class="welcome-header">
+      <h2>Welcome, {{ user.username }} 👋</h2>
+      <div class="days-left">
+        {% if profile.is_premium %}
+          🌟 Premium User
+        {% else %}
+          Days left: {{ profile.days_left }}
+        {% endif %}
+      </div>
+    </div>
+
+    <p class="user-info">
+      <b>User Type:</b> {{ profile.user_type|title }} |
+      <b>Trial Active:</b>
+      {% if profile.is_trial_active %}
+        ✅ Active
+      {% else %}
+        ❌ Expired
+      {% endif %}
+      |
+      <b>Trial Ends:</b> {{ profile.trial_expiry|date:"d M Y" }}
+    </p>
+
+    {% if not profile.is_premium and not profile.is_trial_active %}
+      <div class="upgrade-section">
+        <p>Your trial has expired. Unlock all modules with Premium access!</p>
+        <a href="#" class="upgrade-btn">Unlock Premium</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Modules Section -->
+  <div class="modules-section">
+    <h3 class="section-title">Explore Modules</h3>
+
+    <div class="modules-grid">
+      {% for module in modules %}
+      <div class="module-card">
+        <div class="image-wrapper">
+          <img src="{{ module.get_image }}" alt="{{ module.name }}">
+          {% if module.is_premium %}
+            <span class="badge premium">Premium</span>
+          {% elif module.is_free %}
+            <span class="badge free">Free</span>
+          {% else %}
+            <span class="badge trial">Trial</span>
+          {% endif %}
+        </div>
+
+        <div class="card-content">
+          <h4>{{ module.name }}</h4>
+          <p>{{ module.description|default:"No description available." }}</p>
+
+          {% if module.is_premium and not profile.is_premium and not profile.is_trial_active %}
+            <a href="#" class="open-btn locked">Locked 🔒</a>
+          {% else %}
+            <a href="{% url 'module_detail' module.name %}" class="open-btn">Open</a>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+        <p class="no-modules">No modules available yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}{{ module.name }}{% endblock %}
+
+{% block content %}
+<div class="module-detail-wrapper">
+  <div class="module-detail-card">
+    <h1 class="module-name">{{ module.name }}</h1>
+    <p class="module-info">
+      Content for <strong>{{ module.name }}</strong> is coming soon.  
+      Stay tuned for exciting updates and features!
+    </p>
+    <div class="module-buttons">
+      <a href="{% url 'home' %}" class="btn-back">← Back to Modules</a>
+      <a href="#" class="btn-premium">Unlock Premium</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
