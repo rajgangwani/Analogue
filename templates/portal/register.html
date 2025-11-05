@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Register - Analogue{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <h2>Create Account</h2>
+    <p class="subtitle">Join Analogue and explore innovative modules</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        {{ uform.username.label_tag }}
+        {{ uform.username }}
+      </div>
+      <div class="form-group">
+        {{ uform.email.label_tag }}
+        {{ uform.email }}
+      </div>
+      <div class="form-group">
+        {{ uform.password.label_tag }}
+        {{ uform.password }}
+      </div>
+      <div class="form-group">
+        {{ uform.confirm_password.label_tag }}
+        {{ uform.confirm_password }}
+      </div>
+      <div class="form-group">
+        {{ pform.user_type.label_tag }}
+        {{ pform.user_type }}
+      </div>
+      <div class="form-group">
+        {{ pform.organization.label_tag }}
+        {{ pform.organization }}
+      </div>
+      <button type="submit" class="btn-primary">Register</button>
+    </form>
+    <p class="switch">Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+  </div>
+</div>
+{% endblock %}
