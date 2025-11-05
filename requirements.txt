@@ -6,7 +6,7 @@ tzdata>=2025.1
 
 # ---------- Deployment ----------
 gunicorn>=21.2.0
-whitenoise>=6.7.0
+whitenoise>=6.6.0
 dj-database-url>=2.3.0
 psycopg2-binary>=2.9.9
 python-dotenv>=1.0.1
@@ -31,4 +31,5 @@ scipy>=1.14.0
 # ---------- Utilities ----------
 python-decouple>=3.8
 typing_extensions>=4.12.0
+
 
