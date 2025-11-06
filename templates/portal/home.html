@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Home{% endblock %}
 
 {% block content %}
@@ -45,7 +46,30 @@
       {% for module in modules %}
       <div class="module-card">
         <div class="image-wrapper">
-          <img src="{{ module.get_image }}" alt="{{ module.name }}">
+
+          {% comment %}
+          ✅ Manual image map for reliability (case-safe, server-safe)
+          {% endcomment %}
+          {% if module.name == "Ag-Ab" %}
+            <img src="{% static 'css/drug_mol_gen.png' %}" alt="Ag-Ab">
+          {% elif module.name == "Binding-Net" %}
+            <img src="{% static 'css/BindingNet.png' %}" alt="Binding-Net">
+          {% elif module.name == "DecoyFinder-Net" %}
+            <img src="{% static 'css/DecoyFinderNET.png' %}" alt="DecoyFinder-Net">
+          {% elif module.name == "Moleugen-Net" %}
+            <img src="{% static 'css/MOLECUGENNE.png' %}" alt="Moleugen-Net">
+          {% elif module.name == "Pharmal-Net" %}
+            <img src="{% static 'css/Pharmanet.png' %}" alt="Pharmal-Net">
+          {% elif module.name == "QSAR" %}
+            <img src="{% static 'css/qsar.png' %}" alt="QSAR">
+          {% elif module.name == "Sim" %}
+            <img src="{% static 'css/remd.png' %}" alt="Sim">
+          {% elif module.name == "Trajecta" %}
+            <img src="{% static 'css/traj_ana.png' %}" alt="Trajecta">
+          {% else %}
+            <img src="{% static 'css/logo.png' %}" alt="Default">
+          {% endif %}
+
           {% if module.is_premium %}
             <span class="badge premium">Premium</span>
           {% elif module.is_free %}
