@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Pharmal-Net Prediction | Analogue{% endblock %}
+
+{% block content %}
+<!-- 🔹 Training / Prediction Buttons (Right-aligned, clean background) -->
+<div class="absolute top-[85px] right-8 flex space-x-3 z-40">
+  <a href="{% url 'pharmalnet_train' %}"
+     class="px-5 py-2 rounded-lg font-medium shadow transition-all duration-200
+            {% if 'pharmal-net/' in request.path and 'predict' not in request.path %}
+                bg-cyan-600 text-white shadow-lg
+            {% else %}
+                bg-cyan-100 text-cyan-800 hover:bg-cyan-200
+            {% endif %}">
+    🚀 Training
+  </a>
+
+  <a href="{% url 'pharmalnet_predict' %}"
+     class="px-5 py-2 rounded-lg font-medium shadow transition-all duration-200
+            {% if 'predict' in request.path %}
+                bg-cyan-600 text-white shadow-lg
+            {% else %}
+                bg-cyan-100 text-cyan-800 hover:bg-cyan-200
+            {% endif %}">
+    🔍 Prediction
+  </a>
+</div>
+
+<!-- 🔹 Main Content -->
+<div id="pharmalnet-bg" class="min-h-screen text-gray-800 px-8 py-10 pt-32 relative transition-colors duration-500">
+  <h1 class="text-center text-4xl font-bold text-white mb-6">Pharmal-Net</h1>
+
+  <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+
+    <!-- 🧬 LEFT PANEL: Input Section -->
+    <div class="bg-white rounded-2xl shadow-xl p-6 space-y-5">
+      <h2 class="text-2xl font-semibold text-gray-800">Protein Drug Prediction</h2>
+      <p class="text-gray-500">Predict binding affinity or interaction outcomes using trained models.</p>
+
+      <form id="predictForm" method="POST" enctype="multipart/form-data" action="{% url 'pharmalnet_predict_api' %}">
+        {% csrf_token %}
+
+        <!-- File Upload -->
+        <div>
+          <label class="block text-gray-700 font-medium mb-1">Upload CSV File</label>
+          <input type="file" name="dataset" id="csvInput" accept=".csv"
+            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 text-gray-800 bg-white">
+        </div>
+
+        <!-- Input Columns -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-1">Smiles Column Name</label>
+            <input type="text" name="smiles_col" placeholder="Enter Smiles Column Name"
+              class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500">
+          </div>
+
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-1">Protein Column Name</label>
+            <input type="text" name="protein_col" placeholder="Enter Protein Column Name"
+              class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500">
+          </div>
+        </div>
+
+        <div class="text-center text-gray-500 font-semibold">OR</div>
+
+        <!-- Manual Entry -->
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-1">Protein Sequence</label>
+          <textarea name="protein" rows="3" placeholder="Enter Protein Sequence"
+            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-1">Smiles</label>
+          <textarea name="smiles" rows="3" placeholder="Enter Smiles String"
+            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500"></textarea>
+        </div>
+
+        <!-- Model File -->
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-1">Model File (.zip)</label>
+          <input type="file" name="model" accept=".pt,.pkl,.zip"
+            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 bg-white">
+        </div>
+
+        <!-- Predict Button -->
+        <button type="submit"
+          class="w-full bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 text-white py-2 rounded-lg font-medium transition transform hover:scale-[1.02] active:scale-[0.98]">
+          🔍 Predict
+        </button>
+      </form>
+    </div>
+
+    <!-- 📊 RIGHT PANEL: Output Section -->
+    <div class="bg-white rounded-2xl shadow-xl p-6">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4">🧾 Prediction Results</h2>
+
+      <!-- ✅ FIX: Wrap JSON result inside a .prediction-box -->
+      <div id="resultsBox" class="prediction-box space-y-4 text-gray-700">
+        <p class="italic text-gray-400">Prediction results will appear here after processing.</p>
+      </div>
+
+      <!-- Hidden Download Button -->
+      <div id="downloadSection" class="mt-4 hidden">
+        <button id="downloadCSV"
+          class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-2 rounded-lg font-medium transition">
+          ⬇️ Download Results CSV
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.getElementById("predictForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  const resultsBox = document.getElementById("resultsBox");
+  const downloadSection = document.getElementById("downloadSection");
+
+  resultsBox.innerHTML = "<p class='text-gray-500 italic'>⏳ Processing your request...</p>";
+  downloadSection.classList.add("hidden");
+
+  try {
+    const response = await fetch("{% url 'pharmalnet_predict_api' %}", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      Swal.fire({
+        icon: "error",
+        title: "Prediction Failed",
+        text: data.error,
+        confirmButtonColor: "#06b6d4"
+      });
+      resultsBox.innerHTML = `<p class='text-red-600 font-medium'>❌ ${data.error}</p>`;
+      return;
+    }
+
+    Swal.fire({
+      icon: "success",
+      title: "Prediction Successful!",
+      text: data.message || "Results generated successfully.",
+      confirmButtonColor: "#06b6d4"
+    });
+
+    if (data.prediction) {
+      resultsBox.innerHTML = `
+        <p class="text-green-700 font-semibold">✅ Predicted Value: ${data.prediction.toFixed(4)}</p>
+      `;
+      return;
+    }
+
+    // ✅ Ensure we have preview data
+    if (data.preview && data.preview.length > 0) {
+      const allData = data.full_data && data.full_data.length ? data.full_data : data.preview;
+      const limitedData = data.preview.slice(0, 5);
+      let showingAll = false;
+
+      // ✅ Render section
+      resultsBox.innerHTML = `
+        <h3 class="font-semibold text-gray-800 mb-2">
+          Predictions Preview
+        </h3>
+        <div id="previewBox" 
+             class="bg-cyan-50 rounded-lg p-3 border border-cyan-100 text-sm overflow-y-auto max-h-[400px] transition-all duration-300">
+          <pre>${JSON.stringify(limitedData, null, 2)}</pre>
+        </div>
+        <div class="text-center mt-3">
+          <button id="toggleBtn"
+            class="bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2 rounded-lg font-medium transition">
+            👁️ Show More
+          </button>
+        </div>
+      `;
+
+      const toggleBtn = document.getElementById("toggleBtn");
+      const previewBox = document.getElementById("previewBox");
+
+      toggleBtn.addEventListener("click", () => {
+        if (!showingAll) {
+          previewBox.innerHTML = `<pre>${JSON.stringify(allData, null, 2)}</pre>`;
+          toggleBtn.textContent = "👁️ Show Less";
+          previewBox.scrollIntoView({ behavior: "smooth", block: "start" });
+          showingAll = true;
+        } else {
+          previewBox.innerHTML = `<pre>${JSON.stringify(limitedData, null, 2)}</pre>`;
+          toggleBtn.textContent = "👁️ Show More";
+          previewBox.scrollIntoView({ behavior: "smooth", block: "start" });
+          showingAll = false;
+        }
+      });
+
+      // ✅ CSV download
+      downloadSection.classList.remove("hidden");
+      document.getElementById("downloadCSV").onclick = function () {
+        const csvContent =
+          "data:text/csv;charset=utf-8," +
+          Object.keys(allData[0]).join(",") +
+          "\n" +
+          allData.map((r) => Object.values(r).join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.href = encodedUri;
+        link.download = "pharmalnet_predictions.csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+    } else {
+      resultsBox.innerHTML = "<p class='text-gray-500 italic'>No prediction output found.</p>";
+    }
+
+  } catch (err) {
+    Swal.fire({
+      icon: "error",
+      title: "Server Error",
+      text: err.message || "Something went wrong!",
+      confirmButtonColor: "#06b6d4"
+    });
+    resultsBox.innerHTML = `<p class='text-red-600 font-medium'>❌ ${err.message}</p>`;
+  }
+});
+// ✅ Sync Pharmal-Net background with dark/light toggle
+function updatePharmalNetTheme() {
+  const bgDiv = document.getElementById("pharmalnet-bg");
+  const html = document.documentElement;
+
+  if (!bgDiv) return;
+
+  if (html.classList.contains("dark")) {
+    bgDiv.style.background = "linear-gradient(to bottom, #0c2f3f, #0b2a38)";
+  } else {
+    bgDiv.style.background = "linear-gradient(to bottom, #0e7575, #0a7f7f)";
+  }
+}
+
+// Run on load + whenever theme toggles
+updatePharmalNetTheme();
+const observer = new MutationObserver(updatePharmalNetTheme);
+observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+
+</script>
+
+
+
+<style>
+/* ✅ FIX LONG PROTEIN SEQUENCES (seq1) WRAPPING */
+.prediction-box {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 500px;
+  background-color: #e6f4f1;
+  border-radius: 10px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* JSON output inside <pre> */
+.prediction-box pre {
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+  overflow-wrap: break-word !important;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  color: #222;
+  line-height: 1.5;
+  margin: 0;
+}
+</style>
+{% endblock %}

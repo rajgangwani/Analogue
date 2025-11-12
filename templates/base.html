@@ -1,32 +1,157 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="transition-colors duration-300">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Analogue{% endblock %}</title>
+
+  <!-- Tailwind setup -->
+  <script>
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = { darkMode: 'class' };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
-<body>
-  <!-- Navbar -->
-  <header class="navbar">
-    <div class="brand">
-      <img src="{% static 'css/logo.png' %}" alt="Analogue Logo" height="40">
+
+<body class="text-gray-900 dark:text-gray-100 transition-colors duration-300">
+
+  <!-- ✅ Navbar -->
+  <header class="navbar flex justify-between items-center px-6 py-4 text-white transition-colors duration-300 custom-header">
+    <div class="brand flex items-center space-x-2">
+      <a href="https://growdeatech.com/" target="_blank" rel="noopener noreferrer">
+        <img src="{% static 'css/logo.png' %}" alt="Analogue Logo" height="40" class="rounded-lg">
+      </a>
     </div>
-    <nav>
+
+    <nav class="flex items-center space-x-6">
       {% if user.is_authenticated %}
-        <a href="{% url 'home' %}">Home</a>
-        <a href="{% url 'logout' %}">Logout</a>
+      <a href="{% url 'home' %}" class="hover:text-cyan-300 transition">Home</a>
+      <a href="{% url 'logout' %}" id="logout-link" class="hover:text-cyan-300 transition">Logout</a>
       {% else %}
-        <a href="{% url 'login' %}">Login</a>
-        <a href="{% url 'register' %}">Register</a>
+      <a href="{% url 'login' %}" class="hover:text-cyan-300 transition">Login</a>
+      <a href="{% url 'register' %}" class="hover:text-cyan-300 transition">Register</a>
       {% endif %}
+
+      <!-- 🌙 Dark Mode Toggle -->
+      <button id="themeToggle"
+        class="ml-3 p-2 rounded-full bg-cyan-200 hover:bg-cyan-300 text-cyan-800 transition-transform transform hover:scale-110 dark:bg-yellow-400 dark:text-gray-800"
+        title="Toggle Dark Mode">
+        <span id="themeIcon" class="inline-block text-xl transition-transform duration-500 ease-in-out rotate-0">🌙</span>
+      </button>
     </nav>
   </header>
 
-  <!-- Page Content -->
-  <main class="main-content">
+  <!-- ✅ Page Content -->
+  <main class="main-content min-h-screen transition-colors duration-300">
     {% block content %}{% endblock %}
   </main>
+
+  <!-- ✅ Scripts -->
+  <script>
+    // Logout confirmation
+    document.addEventListener("DOMContentLoaded", () => {
+      const logoutLink = document.getElementById("logout-link");
+      if (logoutLink) {
+        logoutLink.addEventListener("click", function (e) {
+          e.preventDefault();
+          if (confirm("⚠️ Are you sure you want to logout?\nYour temporary data will be deleted.")) {
+            window.location.href = logoutLink.href;
+          }
+        });
+      }
+    });
+
+    // 🌙 Dark Mode Toggle with localStorage persistence
+    (function () {
+      const html = document.documentElement;
+      const icon = document.getElementById("themeIcon");
+      const btn = document.getElementById("themeToggle");
+
+      if (localStorage.getItem("theme") === "dark") {
+        html.classList.add("dark");
+        icon.textContent = "☀️";
+      }
+
+      btn.addEventListener("click", () => {
+        icon.classList.add("rotate-icon");
+        setTimeout(() => {
+          icon.classList.remove("rotate-icon");
+          if (html.classList.contains("dark")) {
+            html.classList.remove("dark");
+            localStorage.setItem("theme", "light");
+            icon.textContent = "🌙";
+          } else {
+            html.classList.add("dark");
+            localStorage.setItem("theme", "dark");
+            icon.textContent = "☀️";
+          }
+        }, 200);
+      });
+    })();
+  </script>
+
+  <style>
+  html, body, main, header {
+    transition: background-color 0.4s ease, color 0.4s ease;
+  }
+
+  .rotate-icon {
+    transform: rotate(180deg);
+    transition: transform 0.4s ease;
+  }
+
+  /* 🌤️ Light Mode — your original Growdea teal gradient */
+  body {
+    background: linear-gradient(180deg, #0e7575 0%, #087979 50%, #0a7f7f 100%);
+  }
+
+  /* ✅ Header now uses *the exact same top gradient* as body */
+  .custom-header {
+    background: linear-gradient(180deg, #0e7575 0%, #0a7f7f 100%);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* 🌙 Dark Mode — Teal–to–Navy transition for smooth blend */
+  html.dark body {
+    background: linear-gradient(180deg, #0c2f3f 0%, #0b2a38 50%, #081e2a 100%) !important;
+  }
+
+  /* ✅ Header perfectly continues same dark gradient */
+  html.dark .custom-header {
+    background: linear-gradient(180deg, #0c2f3f 0%, #0b2a38 100%) !important;
+    box-shadow: 0 2px 10px rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* ✅ Fix for modules like Pharmal-Net — unify main background */
+  html.dark main,
+  html.dark .main-content {
+    background: linear-gradient(180deg, #0c2f3f 0%, #0b2a38 100%) !important;
+  }
+
+  /* ✅ Dark Mode Text + Cards */
+  html.dark .bg-white {
+    background-color: #0f172a !important;
+    color: #e5e7eb !important;
+  }
+  html.dark .text-gray-800,
+  html.dark .text-gray-700,
+  html.dark .text-gray-600 {
+    color: #d1d5db !important;
+  }
+  html.dark .border-gray-300,
+  html.dark .border-gray-200 {
+    border-color: rgba(148, 163, 184, 0.25) !important;
+  }
+</style>
+
+
+
 </body>
 </html>

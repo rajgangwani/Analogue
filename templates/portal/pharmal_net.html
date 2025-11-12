@@ -1,0 +1,572 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ module.name }} | Analogue{% endblock %}
+
+{% block content %}
+<style>
+/* 🩵 Ensure SweetAlert popup is clickable and above everything */
+.swal2-container {
+  z-index: 999999 !important;
+  pointer-events: all !important;
+}
+.swal2-popup {
+  z-index: 9999999 !important;
+}
+
+/* 🎨 FIX: Match exact navbar gradient for both light & dark modes */
+body.light-mode,
+html:not(.dark) body {
+  background: linear-gradient(to bottom, #0e7575, #0a7f7f) !important;
+}
+
+html.dark body {
+  background: linear-gradient(to bottom, #0c2f3f, #0b2a38) !important;
+}
+</style>
+
+<!-- Tailwind CSS + SweetAlert + Chart.js -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+<div class="min-h-screen text-gray-800 px-8 py-10 pt-32 relative transition-colors duration-300">
+  <div class="max-w-7xl mx-auto space-y-10">
+
+  <!-- 🔹 Training / Prediction Buttons (Right-aligned, clean background) -->
+<div class="absolute top-[85px] right-8 flex space-x-3 z-40">
+  <a href="{% url 'pharmalnet_train' %}"
+     class="px-5 py-2 rounded-lg font-medium shadow transition-all duration-200
+            {% if 'pharmal-net/' in request.path and 'predict' not in request.path %}
+                bg-cyan-600 text-white shadow-lg
+            {% else %}
+                bg-cyan-100 text-cyan-800 hover:bg-cyan-200
+            {% endif %}">
+    🚀 Training
+  </a>
+
+  <a href="{% url 'pharmalnet_predict' %}"
+     class="px-5 py-2 rounded-lg font-medium shadow transition-all duration-200
+            {% if 'predict' in request.path %}
+                bg-cyan-600 text-white shadow-lg
+            {% else %}
+                bg-cyan-100 text-cyan-800 hover:bg-cyan-200
+            {% endif %}">
+    🔍 Prediction
+  </a>
+</div>
+
+
+    <!-- 🔹 Header -->
+    <div class="text-center text-white">
+      <h1 class="text-center text-4xl font-bold text-white mb-2">{{ module.name }}</h1>
+    </div>
+
+    <!-- 🔹 Upload + Preview Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+      <!-- 🔸 LEFT PANEL -->
+      <div
+        class="bg-white rounded-2xl shadow-xl p-6 space-y-5 transform transition-transform duration-300 hover:scale-[1.02] hover:shadow-2xl">
+        <h2 class="text-2xl font-semibold text-gray-800">Protein Drug Interaction</h2>
+        <p class="text-gray-500">Mapping critical interactions for therapeutic insights</p>
+
+        <div class="flex flex-wrap gap-3">
+          <button
+            class="bg-cyan-100 hover:bg-cyan-200 text-gray-800 dark:bg-cyan-800 dark:hover:bg-cyan-700 dark:text-white px-4 py-2 rounded-lg transition">How to use?</button>
+          <a href="{% static 'pretrained/datasets/sample_data.csv' %}" 
+          download="sample_data.csv"
+          class="bg-cyan-100 hover:bg-cyan-200 text-gray-800 dark:bg-cyan-800 dark:hover:bg-cyan-700 dark:text-white px-4 py-2 rounded-lg transition inline-block">
+          Sample File ⬇️
+          </a>
+        </div>
+
+        <!-- Upload Form -->
+        <form id="trainForm" method="POST" enctype="multipart/form-data" class="space-y-4">
+          {% csrf_token %}
+          <div>
+            <label class="block text-gray-700 font-medium mb-1">Upload CSV File</label>
+            <input type="file" name="dataset" id="csvInput" accept=".csv"
+              class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 text-gray-800 bg-white">
+          </div>
+
+          <!-- Input Fields -->
+          <div class="grid grid-cols-2 gap-4">
+            <input type="text" name="smiles_col" id="smilesCol" placeholder="Smiles Column Name"
+              class="border border-gray-300 rounded-lg p-2 text-gray-800 focus:ring-2 focus:ring-cyan-500">
+            <input type="text" name="protein_col" id="proteinCol" placeholder="Protein Column Name"
+              class="border border-gray-300 rounded-lg p-2 text-gray-800 focus:ring-2 focus:ring-cyan-500">
+            <input type="text" name="value_col" id="valueCol" placeholder="Value Column Name"
+              class="border border-gray-300 rounded-lg p-2 text-gray-800 focus:ring-2 focus:ring-cyan-500">
+            <input type="text" name="model_name" id="modelName" placeholder="Model Name (Optional)"
+              class="border border-gray-300 rounded-lg p-2 text-gray-800 focus:ring-2 focus:ring-cyan-500">
+          </div>
+
+          <!-- Dropdowns -->
+          <div class="grid grid-cols-2 gap-4 mt-2">
+            <div>
+              <label class="text-gray-700 text-sm font-medium mb-1 block">Pretrained Model</label>
+              <select id="pretrainedModel"
+                class="w-full border border-gray-300 rounded-lg p-2 text-gray-800 focus:ring-2 focus:ring-cyan-500">
+                <option value="">Select a Pretrained Model</option>
+                <option value="{% static 'pretrained/models/model_ki.pkl' %}">model_ki.pkl</option>
+                <option value="{% static 'pretrained/models/model_kd.pkl' %}">model_kd.pkl</option>
+                <option value="{% static 'pretrained/models/model_ec50.pkl' %}">model_ec50.pkl</option>
+                <option value="{% static 'pretrained/models/ic50_model.pkl' %}">ic50_model.pkl</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-gray-700 text-sm font-medium mb-1 block">Download Dataset</label>
+              <select id="downloadDataset"
+                class="w-full border border-gray-300 rounded-lg p-2 text-gray-800 focus:ring-2 focus:ring-cyan-500">
+                <option value="">Select a Dataset</option>
+                <option value="{% static 'pretrained/datasets/Ec50_smiles.csv' %}">Ec50_smiles.csv</option>
+                <option value="{% static 'pretrained/datasets/kd_smiles.csv' %}">kd_smiles.csv</option>
+                <option value="{% static 'pretrained/datasets/ic50_1.csv' %}">ic50_1.csv</option>
+                <option value="{% static 'pretrained/datasets/ki_smiles.csv' %}">ki_smiles.csv</option>
+              </select>
+            </div>
+          </div>
+
+
+          <!-- Buttons -->
+          <div class="flex justify-between items-center mt-4">
+            <button type="submit" id="trainBtn"
+              class="bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 text-white px-6 py-2 rounded-lg font-medium transition transform hover:scale-[1.03] active:scale-[0.98]">
+              🚀 Training
+            </button>
+
+            <button type="button" id="downloadModelBtn"
+              class="bg-cyan-100 hover:bg-cyan-200 text-gray-800 dark:bg-cyan-800 dark:hover:bg-cyan-700 dark:text-white px-6 py-2 rounded-lg transition">
+              ⬇️ Download Model
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 🔸 RIGHT PANEL -->
+      <div
+        class="bg-white rounded-2xl shadow-xl p-6 transform transition-transform duration-300 hover:scale-[1.02] hover:shadow-2xl relative">
+        <h2 id="panelTitle" class="text-2xl font-semibold mb-4 text-gray-800">🧬 Module Preview</h2>
+        <div id="imageContainer"
+          class="w-full h-[420px] flex items-center justify-center overflow-hidden rounded-lg transition-opacity duration-500">
+          {% if module.image %}
+          <img src="{{ module.image.url }}" alt="{{ module.name }}"
+            class="rounded-lg shadow-md object-cover w-full h-full">
+          {% else %}
+          <p class="text-gray-500 italic">No preview image available</p>
+          {% endif %}
+        </div>
+
+        <div id="previewContainer"
+          class="hidden overflow-x-auto h-[420px] overflow-y-scroll border rounded-lg transition-opacity duration-500">
+          <table class="min-w-full text-sm text-gray-700 border-collapse">
+            <thead class="bg-cyan-800 text-white sticky top-0"></thead>
+            <tbody id="csvPreviewBody" class="divide-y divide-gray-100 bg-white"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔹 Model Performance Section -->
+    <div id="resultsPanel" class="bg-white rounded-2xl shadow-xl p-6 hidden animate-fadeIn">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-800">📈 Model Performance</h2>
+      <div id="loadingSpinner" class="text-center text-cyan-600 hidden">
+        <p class="animate-pulse">Training... Please wait ⏳</p>
+      </div>
+
+      <!-- Graph Section -->
+      <div id="graphBox" class="hidden mt-6">
+        <canvas id="trainingChart" class="w-full h-[400px]"></canvas>
+      </div>
+
+      <!-- Metrics -->
+      <div id="metricsBox" class="hidden grid grid-cols-3 gap-4 mt-6 text-center">
+        <div class="bg-cyan-50 p-4 rounded-lg shadow">
+          <span class="block text-gray-600">R² Score</span>
+          <h3 id="r2Value" class="text-xl font-bold text-gray-800">–</h3>
+        </div>
+        <div class="bg-cyan-50 p-4 rounded-lg shadow">
+          <span class="block text-gray-600">MSE</span>
+          <h3 id="mseValue" class="text-xl font-bold text-gray-800">–</h3>
+        </div>
+        <div class="bg-cyan-50 p-4 rounded-lg shadow">
+          <span class="block text-gray-600">Correlation</span>
+          <h3 id="corrValue" class="text-xl font-bold text-gray-800">–</h3>
+        </div>
+      </div>
+
+      <div id="downloadDiv" class="hidden mt-6 text-center">
+        <button id="downloadResultsBtn"
+          class="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-lg font-medium transition transform hover:scale-[1.03]">
+          ⬇️ Download Results
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =======================
+   CSV PREVIEW SECTION
+======================= */
+const csvInput = document.getElementById("csvInput");
+const imageContainer = document.getElementById("imageContainer");
+const previewContainer = document.getElementById("previewContainer");
+const tbody = document.getElementById("csvPreviewBody");
+const thead = previewContainer.querySelector("thead");
+const panelTitle = document.getElementById("panelTitle");
+
+// ✅ CSV Preview (Show all rows with scroll)
+csvInput.addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    Swal.fire({
+      icon: "error",
+      title: "Invalid File",
+      text: "Please upload a valid CSV file!",
+      confirmButtonColor: "#06b6d4"
+    });
+    e.target.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function (e) {
+    const csvText = e.target.result.trim();
+    const rows = csvText.split("\n").map(row => row.split(","));
+    tbody.innerHTML = "";
+    thead.innerHTML = "";
+
+    // Hide module image, show preview table
+    imageContainer.classList.add("hidden");
+    previewContainer.classList.remove("hidden");
+    panelTitle.textContent = "📊 Dataset Preview";
+
+    // ✅ Create Table Header
+    const headers = rows[0];
+    const headerRow = document.createElement("tr");
+    headers.forEach(h => {
+      const th = document.createElement("th");
+      th.textContent = h.trim();
+      th.className = "py-2 px-3 text-left font-semibold bg-cyan-800 text-white sticky top-0";
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+
+    // ✅ Create Table Body (All rows with scroll)
+    for (let i = 1; i < rows.length; i++) {
+      const tr = document.createElement("tr");
+      rows[i].forEach(cell => {
+        const td = document.createElement("td");
+        td.textContent = cell.trim();
+        td.className = "py-1 px-2 truncate border-b border-gray-100 max-w-[180px]";
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    }
+
+    // ✅ Show row count summary
+    Swal.fire({
+      icon: "info",
+      title: "Dataset Loaded",
+      text: `Showing all ${rows.length - 1} records successfully.`,
+      confirmButtonColor: "#06b6d4",
+      timer: 3000
+    });
+  };
+
+  reader.readAsText(file);
+});
+
+
+/* =======================
+   TRAINING REQUEST + CHART
+======================= */
+document.getElementById("trainForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  const formData = new FormData(this);
+  const trainBtn = document.getElementById("trainBtn");
+  const spinner = document.getElementById("loadingSpinner");
+  const resultsPanel = document.getElementById("resultsPanel");
+  const graphBox = document.getElementById("graphBox");
+  const metricsBox = document.getElementById("metricsBox");
+  const downloadDiv = document.getElementById("downloadDiv");
+
+  if (!formData.get("dataset") || !formData.get("smiles_col") || !formData.get("protein_col") || !formData.get("value_col")) {
+    Swal.fire({ icon: "warning", title: "Incomplete Form", text: "Please fill all details!", confirmButtonColor: "#06b6d4" });
+    return;
+  }
+
+  trainBtn.textContent = "⏳ Training... Please wait";
+  trainBtn.disabled = true;
+  spinner.classList.remove("hidden");
+  resultsPanel.classList.remove("hidden");
+  graphBox.classList.add("hidden");
+  metricsBox.classList.add("hidden");
+  downloadDiv.classList.add("hidden");
+
+  try {
+    const res = await fetch("{% url 'pharmalnet_train_api' %}", {
+      method: "POST",
+      body: formData,
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+    });
+
+    const data = await res.json();
+    spinner.classList.add("hidden");
+    trainBtn.textContent = "🚀 Training";
+    trainBtn.disabled = false;
+
+    if (data.error) {
+      Swal.fire({ icon: "error", title: "Error", text: data.error, confirmButtonColor: "#06b6d4" });
+      return;
+    }
+
+    metricsBox.classList.remove("hidden");
+    graphBox.classList.remove("hidden");
+    downloadDiv.classList.remove("hidden");
+
+    // ✅ NEW: if model ZIP is available, show a download prompt
+    if (data.model_zip) {
+  const modelPath = data.model_zip;
+
+  Swal.fire({
+    icon: "success",
+    title: "Training Complete! 🎉",
+    text: "Your model has been trained successfully. Click OK to continue and download from below.",
+    confirmButtonText: "OK",
+    confirmButtonColor: "#06b6d4",
+    showConfirmButton: true
+  });
+
+  // Add "Download Trained Model ZIP" button under results section
+  let trainedModelDiv = document.getElementById("trainedModelDownloadDiv");
+  if (!trainedModelDiv) {
+    trainedModelDiv = document.createElement("div");
+    trainedModelDiv.id = "trainedModelDownloadDiv";
+    trainedModelDiv.className = "text-center mt-6";
+    trainedModelDiv.innerHTML = `
+      <button id="downloadTrainedModelBtn"
+        class="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-lg font-medium transition">
+        ⬇️ Download Trained Model ZIP
+      </button>`;
+    resultsPanel.appendChild(trainedModelDiv);
+  }
+
+  document.getElementById("downloadTrainedModelBtn").onclick = () => {
+    const link = document.createElement("a");
+    // ✅ Ensure absolute path and correct .zip filename
+    const fullUrl = modelPath.startsWith("http") ? modelPath : window.location.origin + modelPath;
+    const downloadName = modelPath.endsWith(".zip") ? modelPath.split("/").pop() : "pharmalnet_trained_model.zip";
+    link.href = fullUrl;
+    link.download = downloadName;
+
+    link.click();
+  };
+}
+
+
+    document.getElementById("r2Value").textContent = data.metrics.R2.toFixed(3);
+    document.getElementById("mseValue").textContent = data.metrics.MSE.toFixed(3);
+    document.getElementById("corrValue").textContent = data.metrics.Corr.toFixed(3);
+
+    const ctx = document.getElementById("trainingChart").getContext("2d");
+
+    if (window.trainingChart instanceof Chart) {
+      window.trainingChart.destroy();
+    }
+
+    const points = data.graph_data.actual.map((val, i) => ({
+      x: val,
+      y: data.graph_data.predicted[i]
+    }));
+
+    const minVal = Math.min(...data.graph_data.actual, ...data.graph_data.predicted);
+    const maxVal = Math.max(...data.graph_data.actual, ...data.graph_data.predicted);
+    const idealLine = [{ x: minVal, y: minVal }, { x: maxVal, y: maxVal }];
+
+    window.trainingChart = new Chart(ctx, {
+      type: "scatter",
+      data: {
+        datasets: [
+          {
+            label: "Actual vs Predicted",
+            data: points,
+            backgroundColor: "rgba(0, 168, 255, 0.8)",
+            borderColor: "#00aaff",
+            pointRadius: 4,
+          },
+          {
+            label: "Ideal Fit (y=x)",
+            data: idealLine,
+            type: "line",
+            borderColor: "black",
+            borderDash: [5, 5],
+            fill: false,
+            tension: 0.1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: "top" },
+          title: {
+            display: true,
+            text: "Actual vs Predicted (Interactive)",
+            font: { size: 16 },
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `Actual: ${ctx.parsed.x.toFixed(2)}, Predicted: ${ctx.parsed.y.toFixed(2)}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            title: { display: true, text: "Actual Values (log10 IC50)" },
+            grid: { color: "rgba(200,200,200,0.2)" },
+          },
+          y: {
+            title: { display: true, text: "Predicted Values (log10 IC50)" },
+            grid: { color: "rgba(200,200,200,0.2)" },
+          },
+        },
+      },
+    });
+
+  } catch (err) {
+    spinner.classList.add("hidden");
+    Swal.fire({ icon: "error", title: "Request Failed", text: err.message, confirmButtonColor: "#06b6d4" });
+    trainBtn.textContent = "🚀 Training";
+    trainBtn.disabled = false;
+  }
+});
+
+// ✅ DOWNLOAD MODEL OR DATASET
+document.getElementById("downloadModelBtn").addEventListener("click", () => {
+  const modelSelect = document.getElementById("pretrainedModel");
+  const datasetSelect = document.getElementById("downloadDataset");
+
+  const modelURL = modelSelect.value;
+  const datasetURL = datasetSelect.value;
+
+  if (!modelURL && !datasetURL) {
+    Swal.fire({
+      icon: "warning",
+      title: "No Selection",
+      text: "Please select a model or dataset to download!",
+      confirmButtonColor: "#06b6d4"
+    });
+    return;
+  }
+
+  // Download pretrained model
+  if (modelURL) {
+    const modelLink = document.createElement("a");
+    modelLink.href = modelURL;
+    modelLink.download = modelURL.split("/").pop();
+    modelLink.click();
+
+    Swal.fire({
+      icon: "success",
+      title: "Model Downloaded",
+      text: "Your pretrained model file has been downloaded successfully ✅",
+      confirmButtonColor: "#06b6d4",
+      timer: 2500
+    });
+  }
+
+  // Download dataset
+  if (datasetURL) {
+    const datasetLink = document.createElement("a");
+    datasetLink.href = datasetURL;
+    datasetLink.download = datasetURL.split("/").pop();
+    datasetLink.click();
+
+    Swal.fire({
+      icon: "success",
+      title: "Dataset Downloaded",
+      text: "Your dataset has been downloaded successfully 📄",
+      confirmButtonColor: "#06b6d4",
+      timer: 2500
+    });
+  }
+});
+
+
+
+/* =======================
+   DOWNLOAD RESULTS (ZIP with Graph + Metrics)
+======================= */
+document.getElementById("downloadResultsBtn").addEventListener("click", async () => {
+  const canvas = document.getElementById("trainingChart");
+  const r2 = document.getElementById("r2Value").textContent;
+  const mse = document.getElementById("mseValue").textContent;
+  const corr = document.getElementById("corrValue").textContent;
+
+  if (!canvas) {
+    Swal.fire({ icon: "error", title: "No Graph Found", text: "Please train a model first." });
+    return;
+  }
+
+  // Convert chart to image
+  const imageData = canvas.toDataURL("image/png").split(',')[1]; // remove base64 prefix
+
+  // Prepare metrics text
+  const metricsText = 
+`📊 Model Performance Metrics
+
+R² Score:      ${r2}
+MSE:           ${mse}
+Correlation:   ${corr}
+
+Generated by Pharmal-Net © Growdea`;
+
+  // Create ZIP
+  const zip = new JSZip();
+  zip.file("metrics.txt", metricsText);
+  zip.file("training_results.png", imageData, { base64: true });
+
+  // Generate ZIP and trigger download
+  const blob = await zip.generateAsync({ type: "blob" });
+  const zipLink = document.createElement("a");
+  zipLink.href = URL.createObjectURL(blob);
+  zipLink.download = "pharmalnet_results.zip";
+  zipLink.click();
+
+  Swal.fire({
+    icon: "success",
+    title: "Download Ready!",
+    text: "Your results (graph + metrics.txt) were downloaded successfully 🎉",
+    confirmButtonColor: "#06b6d4"
+  });
+});
+
+// ✅ Sync Pharmal-Net background with dark/light toggle
+function updatePharmalNetTheme() {
+  const bgDiv = document.getElementById("pharmalnet-bg");
+  const html = document.documentElement;
+
+  if (html.classList.contains("dark")) {
+    bgDiv.style.background = "linear-gradient(to bottom, #0c2f3f, #0b2a38)";
+  } else {
+    bgDiv.style.background = "linear-gradient(to bottom, #0e7575, #0a7f7f)";
+  }
+}
+
+// Run once on load and whenever theme toggles
+updatePharmalNetTheme();
+
+// Observe class change on <html>
+const observer = new MutationObserver(updatePharmalNetTheme);
+observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+
+</script>
+{% endblock %}

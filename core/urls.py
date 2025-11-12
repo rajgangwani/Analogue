@@ -5,11 +5,12 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('portal.urls')),
+    path('', include('portal.urls')),  # main app
 ]
 
-# Serve media files (only for development or temporary use on Render)
+#  Serve media files (uploads) in development mode
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-else:
+
+if not settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

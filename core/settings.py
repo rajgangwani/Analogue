@@ -80,6 +80,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # ---------------- MEDIA FILES ----------------
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+USER_DATA_ROOT = os.path.join(MEDIA_ROOT, "user_data")
 
 # ---------------- AUTHENTICATION REDIRECTS ----------------
 LOGIN_URL = 'login'

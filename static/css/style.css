@@ -432,3 +432,9 @@ input::placeholder {
   color: #bbb;
   cursor: not-allowed;
 }
+/* Smooth transition for dark/light mode */
+html, body, * {
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+}
+
+
