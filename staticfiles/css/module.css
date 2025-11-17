@@ -1,0 +1,129 @@
+body {
+  background: linear-gradient(to bottom right, #023047, #001219);
+  font-family: 'Poppins', sans-serif;
+  color: #222;
+  overflow-x: hidden;
+}
+
+.dashboard-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 30px;
+  width: 90%;
+  margin: 40px auto;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 5px 18px rgba(0,0,0,0.2);
+  padding: 25px;
+}
+.panel.left { flex: 0.4; }
+.panel.right { flex: 0.6; text-align: center; }
+
+.title {
+  font-size: 22px;
+  color: #023047;
+}
+.subtitle {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 5px;
+}
+
+input[type="file"], input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+}
+input[type="file"]:hover, input[type="text"]:focus {
+  border-color: #00b4d8;
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.btn-predict {
+  width: 100%;
+  background: linear-gradient(90deg, #00b4d8, #48cae4);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.btn-predict:hover {
+  transform: scale(1.03);
+}
+
+/* CSV PREVIEW BOX */
+.preview-box {
+  text-align: left;
+  margin-top: 10px;
+}
+.csv-content {
+  display: grid;
+  grid-auto-rows: auto;
+  max-height: 400px;
+  overflow-y: auto;
+  background: #f8f9fa;
+  border-radius: 10px;
+  border: 1px solid #eee;
+}
+.csv-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  padding: 8px 12px;
+  border-bottom: 1px solid #e6e6e6;
+}
+.csv-row.header {
+  background: #023047;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 10px 10px 0 0;
+}
+
+/* RESULT CARD */
+.results-card {
+  background: #fff;
+  width: 90%;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 5px 18px rgba(0,0,0,0.2);
+  margin: 30px auto;
+}
+.loader {
+  text-align: center;
+  color: #00b4d8;
+  font-weight: 600;
+}
+.metrics {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+}
+.metrics h3 { color: #023047; }
+
+/* ANIMATIONS */
+.fade-in { animation: fadeIn 0.7s ease-in-out; }
+.hidden { display: none; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
